@@ -3,6 +3,7 @@ import {
   DEFAULT_REPLY,
   GEMINI_MAX_OUTPUT_TOKENS,
   GEMINI_MODEL,
+  GEMINI_THINKING_BUDGET,
   GEMINI_TIMEOUT_MS,
 } from './constants';
 
@@ -83,6 +84,9 @@ export async function generateReply(
         contents: prompt,
         config: {
           maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
+          thinkingConfig: {
+            thinkingBudget: GEMINI_THINKING_BUDGET,
+          },
         },
       }),
       timeout(GEMINI_TIMEOUT_MS),
