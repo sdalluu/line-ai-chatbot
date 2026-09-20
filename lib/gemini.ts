@@ -1,5 +1,4 @@
 import { GoogleGenAI } from '@google/genai';
-import { waitUntil } from '@vercel/functions';
 import {
   DEFAULT_REPLY,
   GEMINI_MAX_OUTPUT_TOKENS,
@@ -78,44 +77,20 @@ export async function generateReply(
   const start = Date.now();
   const prompt = buildPrompt(faqCsv, userMessage);
 
-  const genPromise = ai.models.generateContent({
-    model: GEMINI_MODEL,
-    contents: prompt,
-    config: {
-      maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
-      thinkingConfig: {
-        thinkingBudget: GEMINI_THINKING_BUDGET,
-      },
-    },
-  });
-
-  // Diagnostic only: keeps tracking the real Gemini latency/outcome even
-  // after we give up and fall back to DEFAULT_REPLY below, so timeout
-  // logs can be compared against how long the call actually took.
-  waitUntil(
-    genPromise
-      .then((res) => {
-        console.log(
-          JSON.stringify({
-            tag: 'gemini-actual',
-            latencyMs: Date.now() - start,
-            finishReason: res.candidates?.[0]?.finishReason,
-          })
-        );
-      })
-      .catch((err) => {
-        console.log(
-          JSON.stringify({
-            tag: 'gemini-actual',
-            latencyMs: Date.now() - start,
-            error: err instanceof Error ? err.message : String(err),
-          })
-        );
-      })
-  );
-
   try {
-    const response = await Promise.race([genPromise, timeout(GEMINI_TIMEOUT_MS)]);
+    const response = await Promise.race([
+      ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: prompt,
+        config: {
+          maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
+          thinkingConfig: {
+            thinkingBudget: GEMINI_THINKING_BUDGET,
+          },
+        },
+      }),
+      timeout(GEMINI_TIMEOUT_MS),
+    ]);
 
     const finishReason = response.candidates?.[0]?.finishReason;
     const thoughtsTokenCount = response.usageMetadata?.thoughtsTokenCount;
