@@ -6,6 +6,7 @@ import {
   GEMINI_THINKING_BUDGET,
   GEMINI_TIMEOUT_MS,
 } from './constants';
+import { selectRelevantFaqCsv } from './faq';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -22,6 +23,10 @@ Microsoft Service, Microsoft SQL Server, Private Hosting, Imunify360,
 <constraints>
 - ตอบโดยใช้ข้อมูลใน <faq> เท่านั้น ห้ามใช้ความรู้นอกเหนือจากนี้
 - ห้ามแต่งหรือเดา ราคา โปรโมชัน เงื่อนไข ระยะเวลา สเปก หรือที่ตั้ง เด็ดขาด
+- ให้ถือว่าคำถามที่ใช้คำพ้อง คำใกล้เคียง สะกดต่างกันเล็กน้อย หรือถามแบบภาษาพูด
+  เป็นคำถามเดียวกับข้อมูลใน <faq> ได้ ถ้าเจตนาชัดเจนและคำตอบมีอยู่ใน <faq>
+- ถ้าแถวใดมีคอลัมน์ "คำตัดสิทธิ์" และคำถามตรงกับคำในคอลัมน์นั้น
+  ห้ามใช้แถวนั้นเป็นแหล่งคำตอบ ให้หาแถวอื่นที่ตรงกว่าแทน
 - ถ้าคำถามไม่ตรงกับข้อมูลใน <faq> หรือมีข้อมูลไม่ครบพอจะตอบ
   ให้ตอบข้อความนี้เท่านั้น คำต่อคำ ห้ามเติมหรือตัดคำ:
   ${DEFAULT_REPLY}
@@ -83,7 +88,8 @@ export async function generateReply(
   faqCsv: string
 ): Promise<string> {
   const start = Date.now();
-  const prompt = buildPrompt(faqCsv, userMessage);
+  const relevantFaqCsv = selectRelevantFaqCsv(faqCsv, userMessage);
+  const prompt = buildPrompt(relevantFaqCsv, userMessage);
 
   try {
     const response = await Promise.race([
